@@ -12,18 +12,21 @@ export async function main(ns) {
 	ns.print('INFO: Target - ' + server);
 
 	while (true) {
-		ns.killall(server);
+		//ns.killall(server);
 
+		// Find our threads that are usable.
 		var availableThreads = Math.floor(ns.getServerMaxRam(host) / ns.getScriptRam(ns.getScriptName()));
 
 		ns.print('INFO: Available Threads - ' + availableThreads);
 
+		// Simple checks.
 		if (ns.fileExists('BruteSSH.exe')) ns.brutessh(server);
 		if (ns.fileExists('FTPCrack.exe')) ns.ftpcrack(server);
 		if (ns.fileExists('HTTPWorm.exe')) ns.httpworm(server);
 		if (ns.fileExists('relaySMTP.exe')) ns.relaysmtp(server);
 		if (ns.fileExists('SQLInject.exe')) ns.sqlinject(server);
 
+		// We need access right?
 		ns.nuke(server);
 		ns.print('INFO: Nuked ' + server);
 
@@ -37,6 +40,7 @@ export async function main(ns) {
 			await ns.grow(server, {threads: availableThreads});
 		}
 
+		// $$$
 		ns.print('INFO: Hack ran.');
 		await ns.hack(server, {threads: availableThreads});
 		ns.clearLog();
