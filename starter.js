@@ -6,18 +6,35 @@ export async function main(ns) {
 	ns.tail();
 
 	let servers = serverList(ns);
-	let target = ns.args[0];
 
-	ns.print(target);
+	// Sort the servers by the max memory they have.
+	servers.sort((a, b) => ns.getServerMaxRam(b) - ns.getServerMaxRam(a));
+
+	let usableServers = servers.filter(serv => ns.hasRootAccess(serv) && ns.getServerMaxRam(serv) > 0);
+	let cracks = availablePortOpeners(ns);
+    let numCracksAvailable = cracks.length;
+
+	ns.tprint(usableServers);
+
+	ns.print(ns.args[0]);
 	await ns.sleep(750);
 
-	ns.print('INFO: Security Level - ' + ns.getServerSecurityLevel(target));
+	ns.print('INFO: Sever count - ' + servers.length);
 	await ns.sleep(750);
 
-	ns.print('INFO: Minimum Security Level - ' + ns.getServerMinSecurityLevel(target));
+	ns.print('INFO: Usable server count - ' + usableServers.length);
 	await ns.sleep(750);
 
-	ns.print('INFO: Server Growth - ' + ns.getServerGrowth(target));
+	ns.print('INFO: Cracks available - ' + numCracksAvailable);
+	await ns.sleep(750);
+
+	ns.print('INFO: Security Level - ' + ns.getServerSecurityLevel(ns.args[0]));
+	await ns.sleep(750);
+
+	ns.print('INFO: Minimum Security Level - ' + ns.getServerMinSecurityLevel(ns.args[0]));
+	await ns.sleep(750);
+
+	ns.print('INFO: Server Growth - ' + ns.getServerGrowth(ns.args[0]));
 	await ns.sleep(750);
 
 	if (!ns.fileExists('virus.js')) {
@@ -51,28 +68,40 @@ export async function main(ns) {
 		await ns.sleep(750);
 	}
 
-	for (const server of servers) {
+	// Get our script's ram we'll use this later.
+	const scriptRam = ns.getScriptRam('virus.js');
+
+	for (const server of usableServers) {
+		if (server == 'home') continue;
+
+		// Calculate the ram that is at our disposal.
+		let availableRam = ns.getServerMaxRam(server) - ns.getServerUsedRam(server);
+
 		// Grab the threads that are currently available.
-		var availableThreads = Math.floor((ns.getServerMaxRam(server) / ns.getScriptRam('virus.js'))) <= 0 ? 1 : Math.floor((ns.getServerMaxRam(server) / ns.getScriptRam('virus.js')));
+		var availableThreads = Math.floor(availableRam / scriptRam);
+
+		// Check if the server is already maxxed out.
+		if (availableThreads <= 0)
+			return;
+
+		// Calling SCP to move our file to the server.
+		await ns.scp('virus.js', server);
 
 		// This is useless since our file does this already.
 		// Kill all running scripts on the server.
 		ns.killall(server);
 
 		// Some simple checks.
-		if (ns.fileExists('BruteSSH.exe')) ns.brutessh(target);
-		if (ns.fileExists('FTPCrack.exe')) ns.ftpcrack(target);
-		if (ns.fileExists('HTTPWorm.exe')) ns.httpworm(target);
-		if (ns.fileExists('relaySMTP.exe')) ns.relaysmtp(target);
-		if (ns.fileExists('SQLInject.exe')) ns.sqlinject(target);
+		if (ns.fileExists('BruteSSH.exe')) ns.brutessh(server);
+		if (ns.fileExists('FTPCrack.exe')) ns.ftpcrack(server);
+		if (ns.fileExists('relaySMTP.exe')) ns.relaysmtp(server);
+		if (ns.fileExists('HTTPWorm.exe')) ns.httpworm(server);
+		if (ns.fileExists('SQLInject.exe')) ns.sqlinject(server);
 
-		ns.nuke(target);
-
-		// Calling SCP to move our file to the server.
-		ns.scp('virus.js', server);
+		ns.nuke(server);
 
 		// Run the file on the server, set the threads to use and our target.
-		ns.exec('virus.js', server, availableThreads, target);
+		ns.exec('virus.js', server, availableThreads, ns.args[0]);
 	}
 
 	while (true) {
@@ -94,4 +123,22 @@ function serverList(ns) {
     }
 
     return servers;
+}
+
+function availablePortOpeners(ns) {
+    const cracklist = [
+        ["BruteSSH.exe", ns.brutessh],
+        ["FTPCrack.exe", ns.ftpcrack],
+        ["SQLInject.exe", ns.sqlinject],
+        ["relaySMTP.exe", ns.relaysmtp],
+        ["HTTPWorm.exe", ns.httpworm],
+    ];
+
+    let availableCracks = [];
+
+    for (const crack of cracklist) {
+        if (ns.fileExists(crack[0])) { availableCracks.push(crack[1]) }
+    }
+
+    return availableCracks;
 }
