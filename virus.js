@@ -15,7 +15,7 @@ export async function main(ns) {
 		//ns.killall(server);
 
 		// Find our threads that are usable.
-		var availableThreads = Math.floor(ns.getServerMaxRam(host) / ns.getScriptRam(ns.getScriptName()));
+		var availableThreads = Math.floor((ns.getServerMaxRam(server) - ns.getServerUsedRam(server)) / ns.getScriptRam(ns.getScriptName()));
 
 		ns.print('INFO: Available Threads - ' + availableThreads);
 
